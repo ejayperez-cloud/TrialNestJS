@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { User } from './user.entity'; // adjust based on your entity
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 

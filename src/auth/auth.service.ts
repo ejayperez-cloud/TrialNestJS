@@ -12,12 +12,12 @@ export class AuthService {
         const user = await this.usersService.findByUsername(username);
         if (!user) return null;
         const valid = await bcrypt.compare(pass, user.password);
-        if (valid) return { id: user.id, username: user.username, role: user.role, phone_number: user.phone_number};
+        if (valid) return { id: user.id, username: user.username};
         return null;
     }
 
-    async login(user: {id: number; username: string; role: string, phone_number: string }) {
-        const payload = { sub: user.id, username: user.username, role: user.role, phone_number: user.phone_number};
+    async login(user: {id: number; username: string; }) {
+        const payload = { sub: user.id, username: user.username};
         const accessToken = this.jwtService.sign(payload);
        
         //const refrest token using separate so you can revoke access by changing refresh secret

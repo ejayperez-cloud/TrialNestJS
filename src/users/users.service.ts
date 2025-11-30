@@ -1,68 +1,88 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { DatabaseService } from "../database/database.service";
+import { RowDataPacket, OkPacket } from "mysql2";
 import * as bcrypt from 'bcryptjs';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+    constructor(private db: DatabaseService) {}
 
-  // Full user creation (for admin/demo)
-  async createUser(
-    first_name: string,
-    last_name: string,
-    username: string,
-    email: string,
-    phone_number: string | null,
-    password: string,
-  ) {
-    if (!password) {
-      throw new BadRequestException('Password is required');
+    private pool = () => this.db.getPool();
+
+    async createUser(
+  username: string,
+  password: string,
+) {
+  const hashed = await bcrypt.hash(password, 10);
+  const [result] = await this.pool().execute<OkPacket>(
+    'INSERT INTO users (username, password) VALUES (?, ?)',
+    [username, hashed],
+  );
+
+
+  return {
+    Id: (result as OkPacket).insertId,
+      username
+  };
+}
+
+    async findByUsername(username: string) {
+        const [rows] = await this.pool().execute<RowDataPacket[]>(
+            'SELECT id, username, password, refresh_token FROM users WHERE username = ?',
+            [username],
+        );
+        return rows[0];
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = this.userRepository.create({
-      first_name,
-      last_name,
-      username,
-      email,
-      phone_number,
-      password: hashedPassword,
-    });
-    return this.userRepository.save(user);
-  }
-
-  // Dedicated registration method for AuthController
-  async registerUser(username: string, password: string) {
-    if (!username || !password) {
-      throw new BadRequestException('Username and password are required');
+    async findById(id: number) {
+        const [rows] = await this.pool().execute<RowDataPacket[]>(
+            'SELECT id, username, role, created_at FROM users WHERE id = ?',
+            [id],
+        );
+        return rows[0];
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = this.userRepository.create({
-      username,
-      password: hashedPassword,
-    });
-    return this.userRepository.save(user);
-  }
+    async getAll() {
+        const [rows] = await this.pool().execute<RowDataPacket[]>(
+            'SELECT id, username, password, created_at FROM users',
+        );
+        return rows;
+    }
 
-  async getAll() {
-    return this.userRepository.find();
-  }
+    async updateUser(id: number, partial: { username?: string; password?: string;}) {
+        const fields: string[] = [];
+        const values: any[] = [];
 
-  async findById(id: number) {
-    return this.userRepository.findOne({ where: { id } });
-  }
+        if (partial.username) {
+            fields.push('username = ?');
+            values.push(partial.username);
+        }
+        if (partial.password) {
+            const hashed = await bcrypt.hash(partial.password, 10);
+            fields.push('password = ?');
+            values.push(hashed);
+        }
+        if (fields.length === 0) return await this.findById(id);
+        values.push(id);
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        await this.pool().execute(sql, values);
+        return this.findById(id);
+    }
 
-  async updateUser(id: number, data: any) {
-    await this.userRepository.update(id, data);
-    return this.findById(id);
-  }
+    async deleteUser(id: number) {
+        const [res] = await this.pool().execute<OkPacket>('DELETE FROM users WHERE id = ?', [id]);
+        return res.affectedRows > 0;
+    }
 
-  async deleteUser(id: number) {
-    return this.userRepository.delete(id);
-  }
+    async setRefreshToken(id: number, refreshToken: string | null) {
+        await this.pool().execute('UPDATE users SET refresh_token = ? WHERE id = ?', [refreshToken, id]);
+    }
+
+    async findByRefreshToken(refreshToken: string | null) {
+        const [rows] = await this.pool().execute<RowDataPacket[]>(
+            'SELECT id, username, role FROM users WHERE refresh_token = ?',
+            [refreshToken],
+        );
+        return rows[0];
+    }
 }

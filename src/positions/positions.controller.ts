@@ -22,8 +22,8 @@ export class PositionsController {
 
     // Create user (open - fore demo)
     @Post()
-    async create(@Body() body: { position_code: string; position_name: string;   id: number | string;}) {
-        return this.positionsService.createPosition(body.position_code, body.position_name, body.id)
+    async create(@Body() body: { position_code: string; position_name: string;  position_type: string; department: string; id: number | string;}) {
+        return this.positionsService.createPosition(body.position_code, body.position_name, body.poosition_type, body.department, body.id)
     }
 
     // Update user (protected)

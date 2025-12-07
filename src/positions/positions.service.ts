@@ -17,7 +17,7 @@ export class PositionsService {
     id: number | string // user id
   ) {
     const [result] = await this.pool().execute<OkPacket>(
-      'INSERT INTO positions (position_code, position_name, position_type, department, id) VALUES (?, ?, ?)',
+      'INSERT INTO positions (position_code, position_name, position_type, department, id) VALUES (?, ?, ?, ?, ?)',
       [position_code, position_name, position_type, department, id],
     );
 

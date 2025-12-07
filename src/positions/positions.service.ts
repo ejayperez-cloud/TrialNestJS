@@ -12,17 +12,21 @@ export class PositionsService {
   async createPosition(
     position_code: string,
     position_name: string,
+    position_type: string,
+    department: string,
     id: number | string // user id
   ) {
     const [result] = await this.pool().execute<OkPacket>(
-      'INSERT INTO positions (position_code, position_name, id) VALUES (?, ?, ?)',
-      [position_code, position_name, id],
+      'INSERT INTO positions (position_code, position_name, position_type, department, id) VALUES (?, ?, ?)',
+      [position_code, position_name, position_type, department, id],
     );
 
     return {
       position_id: (result as OkPacket).insertId,
       position_code,
       position_name,
+      position_type,
+      department,
       id,
     };
   }
@@ -30,7 +34,7 @@ export class PositionsService {
   // ✅ Get one position by its primary key
   async findById(position_id: number) {
     const [rows] = await this.pool().execute<RowDataPacket[]>(
-      'SELECT position_id, position_code, position_name, id, created_at FROM positions WHERE position_id = ?',
+      'SELECT position_id, position_code, position_name, position_type, department, id, created_at FROM positions WHERE position_id = ?',
       [position_id],
     );
     return rows[0];
@@ -39,7 +43,7 @@ export class PositionsService {
   // ✅ Get all positions
   async getAll() {
     const [rows] = await this.pool().execute<RowDataPacket[]>(
-      'SELECT position_id, position_code, position_name, id, created_at FROM positions',
+      'SELECT position_id, position_code, position_name, position_type, department, id, created_at FROM positions',
     );
     return rows;
   }
@@ -47,7 +51,7 @@ export class PositionsService {
   // ✅ Update a position
   async updatePosition(
     position_id: number,
-    partial: { position_code?: string; position_name?: string; id?: number | string },
+    partial: { position_code?: string; position_name?: string; position_type?: string; department?: string; id?: number | string },
   ) {
     const fields: string[] = [];
     const values: any[] = [];
@@ -59,6 +63,14 @@ export class PositionsService {
     if (partial.position_name) {
       fields.push('position_name = ?');
       values.push(partial.position_name);
+    }
+    if (partial.position_type) {
+      fields.push('position_type = ?');
+      values.push(partial.position_type);
+    }
+    if (partial.department) {
+      fields.push('department = ?');
+      values.push(partial.department);
     }
     if (partial.id) {
       fields.push('id = ?');
